@@ -1,0 +1,264 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: "Inter", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "SFMono-Regular", Consolas, ui-monospace, monospace;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-lavender: var(--lavender);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-danger: var(--danger);
+  --color-warning: var(--warning);
+  --color-success: var(--success);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+/* Neutral matte surfaces; purple is a separate, flat accent. */
+:root {
+  --radius: 0.75rem;
+  --background: #17181c;
+  --foreground: #f1f1f3;
+  --card: #1e1f24;
+  --card-foreground: #f1f1f3;
+  --popover: #24252b;
+  --popover-foreground: #f1f1f3;
+  --primary: #b39ae8;
+  --primary-foreground: #1b1626;
+  --secondary: #2b2c33;
+  --secondary-foreground: #f1f1f3;
+  --muted: #25262c;
+  --muted-foreground: #a1a2ad;
+  --accent: #303137;
+  --accent-foreground: #f1f1f3;
+  --lavender: #c5b0ef;
+  --destructive: #d9656c;
+  --destructive-foreground: #ffffff;
+  --danger: #ee858a;
+  --warning: #e5bf79;
+  --success: #8fc7a8;
+  --border: #303137;
+  --input: #383940;
+  --ring: #b39ae8;
+  --chart-1: #c5b0ef;
+  --chart-2: #b39ae8;
+  --chart-3: #8fc7a8;
+  --chart-4: #e5bf79;
+  --chart-5: #ee858a;
+  --sidebar: #111215;
+  --sidebar-foreground: #dedee4;
+  --sidebar-primary: #b39ae8;
+  --sidebar-primary-foreground: #1b1626;
+  --sidebar-accent: #29232f;
+  --sidebar-accent-foreground: #e4d6ff;
+  --sidebar-border: #28292e;
+  --sidebar-ring: #b39ae8;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+  html {
+    color-scheme: dark;
+  }
+  body {
+    margin: 0;
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+.landing-shell {
+  background-color: #111215;
+}
+button:not(:disabled),
+summary {
+  cursor: pointer;
+}
+::selection {
+  background: #b39ae8;
+  color: #17181c;
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #44454e transparent;
+}
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+*::-webkit-scrollbar-thumb {
+  background: #44454e;
+  border-radius: 20px;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Markdown output from the assistants */
+@utility prose-report {
+  line-height: 1.65;
+  font-size: 0.925rem;
+  & h1,
+  & h2,
+  & h3,
+  & h4 {
+    font-weight: 600;
+    color: var(--foreground);
+    margin: 1.2em 0 0.5em;
+    line-height: 1.3;
+  }
+  & h1 {
+    font-size: 1.35rem;
+  }
+  & h2 {
+    font-size: 1.15rem;
+  }
+  & h3 {
+    font-size: 1rem;
+    color: var(--lavender);
+  }
+  & > :first-child {
+    margin-top: 0;
+  }
+  & p,
+  & ul,
+  & ol,
+  & blockquote,
+  & pre,
+  & table {
+    margin: 0.6em 0;
+  }
+  & ul {
+    list-style: disc;
+    padding-left: 1.3em;
+  }
+  & ol {
+    list-style: decimal;
+    padding-left: 1.3em;
+  }
+  & li {
+    margin: 0.2em 0;
+  }
+  & a {
+    color: var(--lavender);
+    text-decoration: underline;
+  }
+  & strong {
+    color: var(--foreground);
+    font-weight: 600;
+  }
+  & code {
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    background: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.05em 0.35em;
+    color: var(--lavender);
+  }
+  & pre {
+    background: var(--background);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.85em 1em;
+    overflow-x: auto;
+  }
+  & pre code {
+    background: none;
+    border: 0;
+    padding: 0;
+    color: var(--foreground);
+  }
+  & blockquote {
+    border-left: 2px solid var(--lavender);
+    padding-left: 0.9em;
+    color: var(--muted-foreground);
+  }
+  & table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    display: block;
+    overflow-x: auto;
+  }
+  & th,
+  & td {
+    border: 1px solid var(--border);
+    padding: 0.4em 0.65em;
+    text-align: left;
+    vertical-align: top;
+  }
+  & th {
+    background: var(--muted);
+    font-weight: 600;
+  }
+  & hr {
+    border-color: var(--border);
+    margin: 1.2em 0;
+  }
+}
+
+::highlight(finding-hl) {
+  background-color: color-mix(in oklab, var(--warning) 45%, transparent);
+  color: var(--foreground);
+}
+
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+@utility animate-pulse-soft {
+  animation: pulse-soft 1.6s ease-in-out infinite;
+}
