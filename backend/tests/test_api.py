@@ -44,12 +44,15 @@ def test_generation_and_reference_boundary(client, generated, monkeypatch):
     assert "SECRET BENCHMARK" not in json.dumps(generation)
     assert client.get(f"/api/v1/generations/{generation['id']}").json() == generation
     captured = []
+    original_generate = MockProvider.generate
     def generate(self, data):
         captured.append(data)
         assert not hasattr(data, "reference_answer")
         assert not hasattr(data, "reference_sources")
         assert "SECRET BENCHMARK" not in build_prompt(data)
-        return "SIMULATED MOCK ANSWER"
+        assert not hasattr(data, "difficulty")
+        assert not hasattr(data, "title")
+        return original_generate(self, data)
     monkeypatch.setattr(MockProvider, "generate", generate)
     assert client.post(f"/api/v1/questions/{question['id']}/generate").status_code == 201
     assert len(captured) == 1

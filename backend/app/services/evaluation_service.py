@@ -2,7 +2,7 @@ from uuid import UUID
 from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-from app.db.models import Evaluation
+from app.db.models import Evaluation, utcnow
 from app.schemas.evaluations import EvaluationCreate
 from app.services.generation_service import get_generation
 def create_evaluation(db: Session, data: EvaluationCreate) -> Evaluation:
@@ -12,6 +12,7 @@ def create_evaluation(db: Session, data: EvaluationCreate) -> Evaluation:
     if generation.status != "completed":
         raise HTTPException(409, "Only completed generations may be evaluated")
     evaluation = Evaluation(**data.model_dump(mode="json", exclude={"question_id", "generation_id"}),
+                            independent_answer_received_at=utcnow() if data.independent_expert_answer else None,
                             question_id=data.question_id, generation_id=data.generation_id)
     db.add(evaluation)
     db.commit()

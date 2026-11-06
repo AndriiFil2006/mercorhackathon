@@ -1,4 +1,5 @@
 import pytest
+import socket
 from alembic import command
 from alembic.config import Config
 from fastapi.testclient import TestClient
@@ -6,6 +7,23 @@ from sqlalchemy.orm import sessionmaker
 from app.core.config import Settings, get_settings
 from app.db.session import get_db, make_engine
 from app.main import app
+
+@pytest.fixture(autouse=True)
+def block_external_network(monkeypatch):
+    """All tests must be offline, even when the developer has real keys configured."""
+    original_connect = socket.socket.connect
+    original_create_connection = socket.create_connection
+    def guarded_connect(sock, address):
+        # Windows asyncio builds its internal socketpair over loopback.
+        if isinstance(address, tuple) and address[0] in ("127.0.0.1", "::1", "localhost"):
+            return original_connect(sock, address)
+        raise AssertionError("External network is forbidden in automated tests")
+    def guarded_create_connection(address, *args, **kwargs):
+        if address[0] in ("127.0.0.1", "::1", "localhost"):
+            return original_create_connection(address, *args, **kwargs)
+        raise AssertionError("External network is forbidden in automated tests")
+    monkeypatch.setattr(socket.socket, "connect", guarded_connect)
+    monkeypatch.setattr(socket, "create_connection", guarded_create_connection)
 
 @pytest.fixture
 def database(tmp_path):

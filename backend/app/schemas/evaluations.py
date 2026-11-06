@@ -27,17 +27,28 @@ class EvaluationCreate(BaseModel):
     error_categories: list[ErrorCategory] = Field(default_factory=list)
     expert_explanation: str = Field(default="", max_length=50000)
     corrected_answer: str | None = Field(default=None, max_length=50000)
+    correction_unavailable_reason: str | None = Field(default=None, min_length=1, max_length=50000)
+    independent_expert_answer: str | None = Field(default=None, min_length=1, max_length=50000)
     supporting_sources: list[Citation] | None = None
     confidence: int | None = Field(default=None, ge=1, le=5, strict=True)
     @model_validator(mode="after")
     def require_correction(self):
         if self.verdict in (Verdict.incorrect, Verdict.partially_correct):
-            if not self.expert_explanation or not self.corrected_answer:
-                raise ValueError("Incorrect and partially correct verdicts require explanation and corrected_answer")
+            if not self.expert_explanation or not (self.corrected_answer or self.correction_unavailable_reason):
+                raise ValueError("Incorrect and partially correct verdicts require explanation and corrected_answer or correction_unavailable_reason")
         return self
 class EvaluationPublic(EvaluationCreate, ORMResponse):
     id: UUID
     created_at: datetime
+    independent_answer_received_at: datetime | None = None
+    @computed_field
+    @property
+    def reviewer_identity_verified(self) -> bool:
+        return False
+    @computed_field
+    @property
+    def review_status(self) -> str:
+        return "submitted"
     @computed_field
     @property
     def verification_status(self) -> str:

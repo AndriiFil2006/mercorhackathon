@@ -19,15 +19,18 @@ class PublicQuestionInput(BaseModel):
     domain: str = Field(min_length=1, max_length=100)
     jurisdiction: str = Field(min_length=1, max_length=250)
     relevant_law_date: date
+    scenario_facts: str | None = Field(default=None, max_length=50000)
     difficulty: Difficulty
 class QuestionCreate(PublicQuestionInput):
     reference_answer: str | None = Field(default=None, max_length=50000)
     reference_sources: list[Citation] | None = None
 class ORMResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    @field_validator("created_at", "updated_at", mode="after", check_fields=False)
+    @field_validator("created_at", "updated_at", "completed_at", "independent_answer_received_at", mode="after", check_fields=False)
     @classmethod
-    def utc_timestamp(cls, value: datetime) -> datetime:
+    def utc_timestamp(cls, value: datetime | None) -> datetime | None:
+        if value is None:
+            return None
         return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value.astimezone(timezone.utc)
 class QuestionPublic(PublicQuestionInput, ORMResponse):
     id: UUID

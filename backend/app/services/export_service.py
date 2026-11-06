@@ -12,7 +12,7 @@ def export_evaluations(db: Session):
     for evaluation in db.scalars(statement):
         generation = evaluation.generation
         yield json.dumps({
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "question": QuestionPublic.model_validate(generation.question).model_dump(mode="json"),
             "generation": GenerationPublic.model_validate(generation).model_dump(mode="json"),
             "evaluation": EvaluationPublic.model_validate(evaluation).model_dump(mode="json"),
