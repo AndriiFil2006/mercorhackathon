@@ -10,6 +10,7 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 
+import { LegalProvider } from "@/lib/legal/store";
 import { Toaster } from "@/components/ui/sonner";
 
 import appCss from "../styles.css?url";
@@ -80,11 +81,17 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Untitled" },
-      { name: "description", content: "Plan your transfers. Check the details." },
+      { title: "CounselCheck" },
+      {
+        name: "description",
+        content: "Ask a legal question. Examine the evidence. Connect with counsel.",
+      },
 
-      { property: "og:title", content: "Untitled" },
-      { property: "og:description", content: "Plan your transfers. Check the details." },
+      { property: "og:title", content: "CounselCheck" },
+      {
+        property: "og:description",
+        content: "Ask a legal question. Examine the evidence. Connect with counsel.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -121,8 +128,10 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
+      {/* Required: nested routes render here. Removing <LegalProvider><Outlet /></LegalProvider> breaks all child routes. */}
+      <LegalProvider>
+        <Outlet />
+      </LegalProvider>
       <Toaster />
     </QueryClientProvider>
   );

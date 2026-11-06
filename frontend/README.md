@@ -1,113 +1,86 @@
-# Untitled — transfer workspace
+# CounselCheck
 
-A matte black and lavender interface with a transfer assistant, a separate checker, and saved conversation sessions. “Untitled” is a placeholder name.
+Matte black and dark gold legal inquiry workspace with three independent reviewer cards, assessments, lawyer connection preview, saved chats, expert feedback and JSONL export.
 
-## Run locally
+## Run
 
-Use Node.js 24 and npm (tested with Node 24.22.1). In the folder containing package.json:
+Use Node.js 24. From `frontend/`:
 
-    npm ci
-    npm run dev
+```powershell
+npm ci
+npm run dev
+```
 
-Open the Local URL printed in the terminal, normally http://localhost:8080. Stop the server with Ctrl+C. If port 8080 is occupied, use the URL Vite prints.
+Open the Local URL printed by Vite (normally http://localhost:8080). Leave the terminal running. Ctrl+C stops it. Use `npm.cmd` if PowerShell blocks npm.ps1. TanStack regenerates its route tree when Vite starts; do not edit `src/routeTree.gen.ts` manually.
 
-If PowerShell blocks npm.ps1, use npm.cmd instead of npm in the commands.
+## Walk through the frontend before the backend is ready
 
-## Put this update into the GitHub repository already open in VS Code
+Create `frontend/.env.local` with:
 
-1. Open the VS Code terminal with Ctrl+backtick. Confirm you are in the frontend folder containing package.json. Use pwd to see the path.
-2. Before copying files, run:
+```dotenv
+VITE_COUNSELCHECK_PREVIEW=true
+```
 
-       git status
-       git pull --ff-only
-       git switch -c ui/matte-workspace
+Restart the dev server. Preview mode gives an illustrative answer and three visibly labeled fixture assessments averaging 65/100. It does not make model calls or perform searches. Placeholder lawyer connections and chat messages are local previews, not real matches or delivered messages. Remove this setting or set it to false when integrating the backend.
 
-   Begin from a clean working tree. If there are already uncommitted teammate changes, preserve/commit them before replacing matching files. If git status says this is not a Git repository, use the Command Palette (Ctrl+Shift+P), choose Git: Clone, enter the existing repository URL, and open the cloned folder.
+The normal mode calls your backend. If it is unavailable, the interface displays a retryable error without fabricating an answer or a score.
 
-3. Extract this ZIP outside the repository. Open the extracted transfer-workspace folder. Copy its contents into the existing frontend folder, replacing matching files; do not put the whole transfer-workspace directory inside the frontend by accident. Do not delete existing files or replace the repository's .git directory, environment files, or additional backend folders.
+## Backend handoff
 
-   If the repo has already advanced beyond the uploaded snapshot, copy/merge the changed files listed below instead of overwriting newer files wholesale. In particular, preserve your teammate's real model integration in src/lib/transfer/api.ts: our changes to that file only simplify the disconnected placeholder messages. No AI function signatures were changed.
+Implement the API boundary in `src/lib/legal/api.ts`. No API keys belong in the frontend. The backend must own model access, online research, citation validation, rate limits and credentials, following the existing gateway setup where applicable. The frontend launches three requests in parallel. The backend must assign three distinct model configurations; a reviewer role label alone does not imply a different model.
 
-4. In the existing frontend folder, run:
+Use same-origin `/api/legal/answer` and `/api/legal/review`, or set `VITE_COUNSELCHECK_API_URL` to your backend's origin and allow the frontend origin in its CORS configuration. Restart Vite after changing environment variables. The frontend request timeout is 60 seconds.
 
-       npm ci
-       npm run dev
+### POST /api/legal/answer
 
-5. Open the printed URL. Check the landing page, New session, sidebar collapse, switching sessions, and refreshing the browser. Ctrl+C stops the development server.
-6. Run the checks:
+Request: `{question, jurisdiction, lawDate, messages}`. Messages are previous conversation turns containing `{id, role, text}`; the new question is separately supplied in `question`.
 
-       npm run typecheck
-       npm test
-       npm run build
+Response:
 
-7. Review and commit from that same repository:
+```json
+{ "answer": "Markdown legal answer with supporting citations" }
+```
 
-       git status
-       git diff --stat
-       git diff
-       git add src public package.json package-lock.json README.md
-       git commit -m "Refine matte UI and add saved sessions"
-       git push -u origin ui/matte-workspace
+### POST /api/legal/review
 
-   Stage only the frontend paths if this is a monorepo. The push uploads the new branch to the existing origin; it does not create a different repository. Open a pull request into your team's working branch (usually main). Merging that pull request makes the update available on the shared branch. Do not force push.
+Request: `{reviewer, question, answer, jurisdiction, lawDate}`. The reviewer is `authority`, `jurisdiction`, or `reasoning`.
 
-   If you are intentionally committing directly to an existing shared branch, skip git switch -c and use git push after committing. Keep pushed history intact.
+Response:
 
-## What changed
+```json
+{
+  "model": "Actual model identifier",
+  "score": 82,
+  "explanation": "Why this answer earned this score",
+  "findings": ["A specific issue found or a supported aspect of the answer"],
+  "sources": [{ "title": "Authority title", "url": "https://official-source.example/path" }]
+}
+```
 
-- Flat, neutral black/charcoal surfaces with separate matte lavender/purple accents.
-- No grid background, gradient wash, purple glow, landing preview, example CTA, or planning-only badges.
-- A minimal landing page, placeholder branding, and one Get started action.
-- A collapsible desktop sidebar and mobile session drawer.
-- New sessions, automatic conversation titles, switching, renaming, and deleting.
-- Both assistant conversations, reports, reviews, and the selected session survive refresh.
-- Independent sessions keep background responses in the originating conversation.
-- Clean workspace header; no demo dropdown or request/context button.
-- Compact mobile assistant tabs and independent desktop panels.
-- Working clipboard feedback, report export, paste-report dialog, and retry controls.
-- An npm lockfile for reproducible installation.
+The three review purposes are authority/citation validity, jurisdiction/date applicability, and reasoning/completeness. Return real research findings and actual source links, not invented authorities. Scores must be numeric and within 0–100; invalid responses show an error. Scores reflect model judgments, not established legal correctness. The overall score is the rounded arithmetic mean only after all three distinct reviewers complete. Failed reviewers can be retried individually.
 
-## Changed or added project files
+At a displayed overall score below 70, the lawyer connection action is prominent. At 70 or above, it remains available as a secondary action. While scores are pending, the secondary connection remains accessible.
 
-- src/styles.css
-- src/routes/index.tsx
-- src/routes/workspace.tsx
-- src/routes/__root.tsx
-- src/components/transfer/MainPanel.tsx
-- src/components/transfer/CheckerPanel.tsx
-- src/components/transfer/shared.tsx
-- src/components/transfer/SessionSidebar.tsx (new)
-- src/lib/transfer/useSession.ts
-- src/lib/transfer/sessionStorage.ts (new)
-- src/lib/transfer/useSession.test.tsx (new)
-- src/lib/transfer/api.ts (placeholder copy only)
-- public/favicon.svg (new)
-- package.json (typecheck command)
-- package-lock.json (new)
-- README.md
+### Lawyer services
 
-The route tree is generated automatically by TanStack; do not edit it manually.
+`/connect?session=...&evaluation=...` intentionally uses a placeholder lawyer, Alex Morgan, clearly labeled. It creates a browser-local conversation and links to `/chats?chat=...`. No real lawyer is contacted and no messages are delivered. To make this live, replace the placeholder connection and local chat operations in `src/components/legal/LawyerChats.tsx` with authenticated directory/matching, lawyer identity verification, message transport and server persistence. Do not present this placeholder as a registered or verified lawyer.
 
-## Sessions
+The always-accessible Chats navigation lists all conversations, including ended chats. Leaving a chat makes it read-only and keeps its history. Returning to an inquiry restores its session. Deleting an inquiry retains its lawyer chats and indicates that the original context is unavailable.
 
-Sessions are saved in localStorage in the current browser, under transfer-workspace:v1. This includes messages, context, reports, and review history. The active session and collapsed-sidebar preference are saved too.
+## Saved data and export
 
-This is device/browser-local history, not account-based cloud synchronization. Use the same local origin when testing: localhost and 127.0.0.1 have separate browser storage. Clearing site data removes saved sessions. A page reload interrupts in-flight model requests; saved partial messages remain visible and interrupted reviews can be retried.
+The `counselcheck:v1` localStorage key stores sessions, jurisdiction/date, messages, all answer assessments, submitted expert evaluations, active inquiry, sidebar preference and lawyer chats. The earlier transfer workspace's storage is untouched. Conversations are browser/origin local, not account synced. Reloading interrupts in-flight calls; unfinished reviews show a retry action. A browser-storage warning appears if persistence fails.
 
-## AI integration for your teammate
+Jurisdiction/date lock once an answer assessment exists; use a new inquiry for different legal context. A dropdown selects earlier assessments without overwriting them. Expert feedback collects reviewer name, verdict, error categories, explanation, correction, supporting authority and confidence. JSONL export includes the question, answer, three model assessments, overall score, provenance and expert feedback. A typed name does not authenticate an expert; export uses `expert_feedback_submitted`, never `expert_verified`, and marks preview provenance. Your backend must handle expert identity, adjudication, rights and quality gates before treating records as validated training data.
 
-Connect the existing async boundaries in src/lib/transfer/api.ts:
+## Checks
 
-- generateReport: main conversation and response streaming.
-- reviewReport: automatic review of a completed or pasted report.
-- askChecker: independent follow-up questions in the checker panel.
+After Vite has generated the route tree:
 
-The uploaded starter has no live AI backend. That remains the case in this update. It saves requests and reports but does not generate real AI plans or verdicts until those functions are connected. Existing fixture data remains available internally, with its labels; demo controls have been removed from the interface.
+```powershell
+npm run typecheck
+npm test
+npm run build
+```
 
-Keep credentials on the server. The app's free-form Markdown display and report/review IDs are retained for integration.
-
-## Validation
-
-The production build, TypeScript check and automated tests were run. Browser interaction checks cover desktop and mobile layouts, creating and switching sessions, refreshing saved history, collapsing/expanding the sidebar, renaming/deleting conversations, and pasting reports. The source archive does not include node_modules or build artifacts; install dependencies with npm ci.
-
-This project retains its original Lovable/TanStack configuration and AGENTS.md instructions.
+Existing React, Lucide, React Markdown, Tailwind and animation packages support this update; no extra package installation beyond `npm ci` is necessary. Navigation and cards use short fade/slide transitions, with reduced-motion support.
