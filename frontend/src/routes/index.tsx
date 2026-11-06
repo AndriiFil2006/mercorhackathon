@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, Scale } from "lucide-react";
+import { ArrowRight, MessageSquare, Scale } from "lucide-react";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [

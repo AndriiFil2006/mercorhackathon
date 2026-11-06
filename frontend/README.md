@@ -27,7 +27,7 @@ The normal mode calls your backend. If it is unavailable, the interface displays
 
 ## Backend handoff
 
-Implement the API boundary in `src/lib/legal/api.ts`. No API keys belong in the frontend. The backend must own model access, online research, citation validation, rate limits and credentials, following the existing gateway setup where applicable. The frontend launches three requests in parallel. The backend must assign three distinct model configurations; a reviewer role label alone does not imply a different model.
+Implement the API boundary in `src/lib/legal/api.ts`. No API keys belong in the frontend. The backend must own model access, online research, citation validation, rate limits and credentials, following the existing gateway setup where applicable. Scorer follow-up uses POST /api/legal/review-chat with the original question, answer, jurisdiction, law date, current reviewer findings, prior scorer conversation and new prompt; return JSON {"answer":"..."}. The frontend launches three requests in parallel. The backend must assign three distinct model configurations; a reviewer role label alone does not imply a different model.
 
 Use same-origin `/api/legal/answer` and `/api/legal/review`, or set `VITE_COUNSELCHECK_API_URL` to your backend's origin and allow the frontend origin in its CORS configuration. Restart Vite after changing environment variables. The frontend request timeout is 60 seconds.
 
@@ -65,7 +65,7 @@ At a displayed overall score below 70, the lawyer connection action is prominent
 
 `/connect?session=...&evaluation=...` intentionally uses a placeholder lawyer, Alex Morgan, clearly labeled. It creates a browser-local conversation and links to `/chats?chat=...`. No real lawyer is contacted and no messages are delivered. To make this live, replace the placeholder connection and local chat operations in `src/components/legal/LawyerChats.tsx` with authenticated directory/matching, lawyer identity verification, message transport and server persistence. Do not present this placeholder as a registered or verified lawyer.
 
-The always-accessible Chats navigation lists all conversations, including ended chats. Leaving a chat makes it read-only and keeps its history. Returning to an inquiry restores its session. Deleting an inquiry retains its lawyer chats and indicates that the original context is unavailable.
+The Chats page contains distinct Legal assistant inquiries and Lawyer conversations sections. The workspace sidebar also includes direct lawyer connection, and the landing page offers it before any inquiry exists. The always-accessible Chats navigation lists all conversations, including ended chats. Leaving a chat makes it read-only and keeps its history. Returning to an inquiry restores its session. Deleting an inquiry retains its lawyer chats and indicates that the original context is unavailable.
 
 ## Saved data and export
 

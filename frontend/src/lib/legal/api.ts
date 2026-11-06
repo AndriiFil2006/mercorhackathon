@@ -100,3 +100,25 @@ export async function reviewAnswer(
   }
   return parseReview(id, await post("review", { reviewer: id, ...request }, signal));
 }
+
+export async function askScorer(input: {
+  question: string;
+  answer: string;
+  jurisdiction: string;
+  lawDate: string;
+  reviews: Review[];
+  history: { role: string; text: string }[];
+  prompt: string;
+}): Promise<string> {
+  if (!input.answer.trim())
+    throw new Error("Generate or paste an answer before asking the scorers.");
+  if (previewMode) {
+    await new Promise((resolve) => setTimeout(resolve, 450));
+    const complete = input.reviews.filter((review) => review.status === "complete");
+    return `Preview response: I considered your question against the existing answer and ${complete.length} completed reviewer finding(s). Your question was: “${input.prompt}” This is only a UI placeholder; it adds no legal research or new score.`;
+  }
+  const result = await post("review-chat", input);
+  if (typeof result.answer !== "string" || !result.answer.trim())
+    throw new Error("The scorer did not return a response.");
+  return result.answer;
+}

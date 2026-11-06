@@ -42,6 +42,7 @@ export type Evaluation = {
   mode: "live" | "preview";
   createdAt: string;
   feedback?: Feedback;
+  scorerMessages?: Message[];
 };
 export type Session = {
   id: string;
@@ -55,8 +56,8 @@ export type Session = {
 };
 export type Chat = {
   id: string;
-  sessionId: string;
-  evaluationId: string;
+  sessionId?: string;
+  evaluationId?: string;
   lawyer: string;
   status: "active" | "closed";
   messages: Message[];

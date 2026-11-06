@@ -30,10 +30,12 @@ export function LawyerConnection({
     return () => clearTimeout(timer);
   }, []);
   function connect() {
-    if (!s || !e) return;
-    const existing = data.chats.find(
-      (c) => c.sessionId === s.id && c.evaluationId === e.id && c.status === "active",
-    );
+    const existing =
+      s && e
+        ? data.chats.find(
+            (c) => c.sessionId === s.id && c.evaluationId === e.id && c.status === "active",
+          )
+        : data.chats.find((c) => !c.sessionId && c.status === "active");
     const id = existing?.id ?? uid();
     if (!existing)
       setData((d) => ({
@@ -41,8 +43,7 @@ export function LawyerConnection({
         chats: [
           {
             id,
-            sessionId: s.id,
-            evaluationId: e.id,
+            ...(s && e ? { sessionId: s.id, evaluationId: e.id } : {}),
             lawyer: "Alex Morgan",
             status: "active",
             createdAt: new Date().toISOString(),
@@ -76,19 +77,15 @@ export function LawyerConnection({
         </Link>
         {!ready ? (
           <p>Opening connection…</p>
-        ) : !s || !e ? (
-          <div className="cc-empty">
-            <h1>Choose an answer first.</h1>
-            <p>Open an assessment to connect its context to a lawyer conversation.</p>
-            <Link className="cc-button" to="/workspace">
-              Open workspace
-            </Link>
-          </div>
         ) : (
           <div className="cc-connection-card cc-enter">
             <span className="cc-eyebrow">A professional perspective</span>
             <h1>{matching ? "Finding your next step…" : "Meet your legal contact."}</h1>
-            <p className="cc-muted">Keep your inquiry, assessment and conversation together.</p>
+            <p className="cc-muted">
+              {s && e
+                ? "Keep your inquiry, assessment and conversation together."
+                : "Start a conversation whenever you want professional legal help."}
+            </p>
             <div className="cc-match-profile">
               <span className="cc-avatar cc-avatar-large">
                 {matching ? <LoaderCircle className="cc-spin" /> : "AM"}
@@ -104,16 +101,18 @@ export function LawyerConnection({
                 ? "Preparing a preview conversation…"
                 : "Preview connection ready. No real lawyer has been contacted. Messages in this prototype are saved on this browser."}
             </p>
-            <div className="cc-context-summary">
-              <span>
-                {s.jurisdiction} · {s.lawDate}
-              </span>
-              <h3>{e.question}</h3>
-              <small>
-                Assessment: {overall(e.reviews) ?? "Pending"}
-                {overall(e.reviews) !== null ? "/100" : ""}
-              </small>
-            </div>
+            {s && e && (
+              <div className="cc-context-summary">
+                <span>
+                  {s.jurisdiction} · {s.lawDate}
+                </span>
+                <h3>{e.question}</h3>
+                <small>
+                  Assessment: {overall(e.reviews) ?? "Pending"}
+                  {overall(e.reviews) !== null ? "/100" : ""}
+                </small>
+              </div>
+            )}
             <button className="cc-button" disabled={matching} onClick={connect}>
               Open chat <ArrowRight size={16} />
             </button>
@@ -171,34 +170,57 @@ export function LawyerChats({ chatId }: { chatId?: string | undefined }) {
           </div>
           {!ready ? (
             <p>Loading chats…</p>
-          ) : !data.chats.length ? (
-            <div className="cc-empty">
-              <MessageSquare size={28} />
-              <h3>A conversation starts here.</h3>
-              <p>Connect from an answer's assessment to keep the context together.</p>
-              <Link className="cc-quiet" to="/workspace">
-                Start an inquiry <ArrowRight size={14} />
-              </Link>
-            </div>
           ) : (
-            data.chats.map((v) => (
-              <Link
-                key={v.id}
-                to="/chats"
-                search={{ chat: v.id }}
-                className={`cc-chat-link ${v.id === c?.id ? "active" : ""}`}
-              >
-                <span className="cc-avatar">AM</span>
-                <div>
-                  <strong>{v.lawyer}</strong>
-                  <p>{v.messages.at(-1)?.text || "No messages yet"}</p>
-                  <small>
-                    {v.status === "closed" ? "Ended" : "Preview conversation"} ·{" "}
-                    {new Date(v.createdAt).toLocaleDateString()}
-                  </small>
-                </div>
-              </Link>
-            ))
+            <>
+              <h2 className="cc-chat-section-title">Legal assistant inquiries</h2>
+              {data.sessions.length ? (
+                data.sessions.map((inquiry) => (
+                  <Link
+                    key={inquiry.id}
+                    to="/workspace"
+                    onClick={() => setData((d) => ({ ...d, activeId: inquiry.id }))}
+                    className="cc-chat-link"
+                  >
+                    <span className="cc-avatar">AI</span>
+                    <div>
+                      <strong>{inquiry.title}</strong>
+                      <p>{inquiry.messages.at(-1)?.text ?? "No messages yet"}</p>
+                      <small>Legal assistant · {inquiry.messages.length} messages</small>
+                    </div>
+                  </Link>
+                ))
+              ) : (
+                <p className="cc-muted">No assistant inquiries yet.</p>
+              )}
+              <h2 className="cc-chat-section-title">Lawyer conversations</h2>
+              {data.chats.length ? (
+                data.chats.map((v) => (
+                  <Link
+                    key={v.id}
+                    to="/chats"
+                    search={{ chat: v.id }}
+                    className={`cc-chat-link ${v.id === c?.id ? "active" : ""}`}
+                  >
+                    <span className="cc-avatar">AM</span>
+                    <div>
+                      <strong>{v.lawyer}</strong>
+                      <p>{v.messages.at(-1)?.text || "No messages yet"}</p>
+                      <small>
+                        {v.status === "closed" ? "Ended" : "Preview conversation"} ·{" "}
+                        {new Date(v.createdAt).toLocaleDateString()}
+                      </small>
+                    </div>
+                  </Link>
+                ))
+              ) : (
+                <p className="cc-muted cc-chat-empty-note">
+                  No lawyer conversations yet.{" "}
+                  <Link to="/connect" search={{ session: "", evaluation: "" }}>
+                    Connect directly
+                  </Link>
+                </p>
+              )}
+            </>
           )}
         </aside>
         <section className="cc-chat-detail" key={c?.id ?? "none"}>

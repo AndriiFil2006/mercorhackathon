@@ -18,6 +18,7 @@ import {
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useLegal } from "@/lib/legal/store";
+import { ScorerChat } from "./ScorerChat";
 import { generateAnswer, previewMode, reviewAnswer } from "@/lib/legal/api";
 import {
   categories,
@@ -595,6 +596,18 @@ export function LegalWorkspace() {
                       </div>
                     );
                   })}
+                  <ScorerChat
+                    session={session}
+                    evaluation={evaluation}
+                    onSave={(scorerMessages) =>
+                      update(session.id, (s) => ({
+                        ...s,
+                        evaluations: s.evaluations.map((e) =>
+                          e.id === evaluation.id ? { ...e, scorerMessages } : e,
+                        ),
+                      }))
+                    }
+                  />
                   <div
                     className={`cc-counsel-cta ${score !== null && score < 70 ? "emphasized" : ""}`}
                   >
