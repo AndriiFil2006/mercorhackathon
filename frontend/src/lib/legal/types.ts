@@ -7,13 +7,52 @@ export const reviewers = [
 export type ReviewerId = (typeof reviewers)[number]["id"];
 export type Review = {
   id: ReviewerId;
-  status: "queued" | "searching" | "complete" | "error";
+  status: "queued" | "searching" | "complete" | "abstained" | "error";
   model?: string;
   score?: number;
   explanation?: string;
   findings?: string[];
-  sources?: { title: string; url: string }[];
+  sources?: (Partial<ResearchSource> & { title: string; url: string })[];
   error?: string | undefined;
+  reportId?: string;
+  generationId?: string | null;
+  mode?: "live" | "mock" | "preview";
+  research?: ResearchReport;
+  queries?: string[];
+  weights?: Record<string, number>;
+  formula?: string;
+  researchWarnings?: string[];
+  cached?: boolean;
+};
+export type ResearchSource = {
+  id: string;
+  title: string;
+  url: string;
+  text: string;
+  retrieved_at: string;
+  evidence_type: "extracted_page" | "search_excerpt" | "mock";
+  truncated: boolean;
+  published_date?: string | null;
+};
+export type ResearchReport = {
+  criteria: Record<
+    "authority" | "jurisdiction" | "interpretation" | "completeness" | "clarity",
+    { score: number; reason: string }
+  >;
+  research_summary: string;
+  jurisdiction_analysis: string;
+  date_analysis: string;
+  claim_checks: {
+    claim: string;
+    verdict: string;
+    explanation: string;
+    evidence: { source_id: string; quote: string }[];
+  }[];
+  limitations: string[];
+  suggested_correction: string;
+  conclusion: string;
+  abstain: boolean;
+  abstention_reason: string;
 };
 export const categories = [
   "Hallucinated law",
@@ -39,7 +78,9 @@ export type Evaluation = {
   question: string;
   answer: string;
   reviews: Review[];
-  mode: "live" | "preview";
+  mode: "live" | "mock" | "preview";
+  generationId?: string;
+  answerModel?: string;
   createdAt: string;
   feedback?: Feedback;
   scorerMessages?: Message[];
@@ -51,6 +92,7 @@ export type Session = {
   lawDate: string;
   messages: Message[];
   evaluations: Evaluation[];
+  externalConsent?: boolean;
   busy?: boolean;
   error?: string | undefined;
 };
@@ -62,7 +104,14 @@ export type Chat = {
   status: "active" | "closed";
   messages: Message[];
   createdAt: string;
-  preview: true;
+  preview?: boolean;
+  handoffToken?: string;
+  handoffId?: string;
+  consentedAt?: string;
+  contextShared?: boolean;
+  busy?: boolean;
+  error?: string | undefined;
+  backendMode?: string;
 };
 export type Store = { sessions: Session[]; activeId: string; chats: Chat[]; collapsed: boolean };
 export function overall(reviews: Review[]): number | null {

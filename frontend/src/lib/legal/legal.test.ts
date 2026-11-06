@@ -39,3 +39,22 @@ describe("Three-reviewer assessment", () => {
     expect(() => parseReview("authority", { ...good, model: "" })).toThrow();
   });
 });
+
+describe("Research abstention and provenance", () => {
+  it("keeps an abstaining reviewer unscored", () => {
+    const result = parseReview("authority", {
+      status: "abstained",
+      score: null,
+      model: "Model A",
+      explanation: "Missing date evidence",
+      findings: ["Date unresolved"],
+      sources: [],
+      reportId: "audit-1",
+      mode: "live",
+    });
+    expect(result.status).toBe("abstained");
+    expect(result.score).toBeUndefined();
+    expect(result.reportId).toBe("audit-1");
+    expect(overall([result, ...complete([70, 70, 70]).slice(1)])).toBeNull();
+  });
+});

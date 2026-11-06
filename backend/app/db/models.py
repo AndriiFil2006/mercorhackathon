@@ -1,6 +1,6 @@
 from datetime import date, datetime, timezone
 from uuid import UUID, uuid4
-from sqlalchemy import Date, DateTime, ForeignKey, JSON, String, Text, Uuid, event, inspect
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, JSON, String, Text, Uuid, event, inspect
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 def utcnow() -> datetime:
@@ -62,3 +62,25 @@ def protect_generation(mapper, connection, target):
     if previous in ("completed", "failed") and any(state.attrs[key].history.has_changes() for key in mapper.column_attrs.keys()):
         raise ValueError("Terminal generations are immutable")
 
+
+
+class AutomatedReview(Base):
+    __tablename__ = "automated_reviews"
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    generation_id: Mapped[UUID | None] = mapped_column(ForeignKey("generations.id"), index=True)
+    request_hash: Mapped[str] = mapped_column(String(64), index=True)
+    report: Mapped[dict] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+class LegalHandoff(Base):
+    __tablename__ = "legal_handoffs"
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    consent_processing: Mapped[bool] = mapped_column(Boolean)
+    consent_share_context: Mapped[bool] = mapped_column(Boolean)
+    context_snapshot: Mapped[dict | None] = mapped_column(JSON)
+    messages: Mapped[list] = mapped_column(JSON, default=list)
+    busy_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    state: Mapped[str] = mapped_column(String(16), default="active")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

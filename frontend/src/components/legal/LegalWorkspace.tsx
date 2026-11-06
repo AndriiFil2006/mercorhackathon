@@ -19,7 +19,8 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useLegal } from "@/lib/legal/store";
 import { ScorerChat } from "./ScorerChat";
-import { generateAnswer, previewMode, reviewAnswer } from "@/lib/legal/api";
+import { ResearchDetails, AssessmentSummary } from "./ResearchDetails";
+import { generateAnswer, previewMode, reviewAnswer, type GeneratedAnswer } from "@/lib/legal/api";
 import {
   categories,
   newSession,
@@ -40,9 +41,13 @@ export function Brand() {
   );
 }
 export function Markdown({ text }: { text: string }) {
+  const rendered = text.replace(
+    /^(Short answer|Applicable law|Legal analysis|Exceptions and limitations|Conclusion|Cited authorities \(model-generated, unverified\)|Uncertainties)\n/gm,
+    "## $1\n",
+  );
   return (
     <div className="prose-report">
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>{rendered}</ReactMarkdown>
     </div>
   );
 }
@@ -61,6 +66,8 @@ export function ExportButton({
       question: evaluation.question,
       ai_response: evaluation.answer,
       generated_at: evaluation.createdAt,
+      generation_id: evaluation.generationId ?? null,
+      answer_model: evaluation.answerModel ?? null,
       provenance: evaluation.mode,
       automated_assessments: evaluation.reviews,
       overall_score: overall(evaluation.reviews),
@@ -113,10 +120,16 @@ export function LegalWorkspace() {
     update(sid, (s) => ({
       ...s,
       evaluations: s.evaluations.map((e) =>
-        e.id === eid ? { ...e, reviews: e.reviews.map((v) => (v.id === r.id ? r : v)) } : e,
+        e.id === eid
+          ? {
+              ...e,
+              mode: r.mode === "mock" ? "mock" : e.mode,
+              reviews: e.reviews.map((v) => (v.id === r.id ? r : v)),
+            }
+          : e,
       ),
     }));
-  async function runReview(s: Session, e: Evaluation, id: Review["id"]) {
+  async function runReview(s: Session, e: Evaluation, id: Review["id"], force = false) {
     updateReview(s.id, e.id, { id, status: "searching" });
     try {
       updateReview(
@@ -125,6 +138,9 @@ export function LegalWorkspace() {
         await reviewAnswer(id, {
           question: e.question,
           answer: e.answer,
+          ...(e.generationId ? { generationId: e.generationId } : {}),
+          externalConsent: s.externalConsent === true,
+          force,
           jurisdiction: s.jurisdiction,
           lawDate: s.lawDate,
         }),
@@ -137,20 +153,29 @@ export function LegalWorkspace() {
       });
     }
   }
-  function addEvaluation(s: Session, question: string, answer: string) {
+  function addEvaluation(s: Session, question: string, generated: GeneratedAnswer) {
+    const answer = generated.answer;
     const e: Evaluation = {
       id: uid(),
       question,
       answer,
       reviews: reviewers.map((r) => ({ id: r.id, status: "queued" })),
-      mode: previewMode ? "preview" : "live",
+      mode: generated.mode,
+      ...(generated.generationId ? { generationId: generated.generationId } : {}),
+      ...(generated.model ? { answerModel: generated.model } : {}),
       createdAt: new Date().toISOString(),
     };
     update(s.id, (v) => ({
       ...v,
       evaluations: [...v.evaluations, e],
       busy: false,
-      messages: [...v.messages, { id: uid(), role: "assistant", text: answer }],
+      messages: [
+        ...v.messages,
+        ...(v.messages.at(-1)?.role === "user" && v.messages.at(-1)?.text === question
+          ? []
+          : [{ id: uid(), role: "user" as const, text: question }]),
+        { id: uid(), role: "assistant", text: answer },
+      ],
     }));
     setSelected(e.id);
     void Promise.all(reviewers.map((r) => runReview(s, e, r.id)));
@@ -162,7 +187,8 @@ export function LegalWorkspace() {
       session.busy ||
       !input.trim() ||
       !session.jurisdiction.trim() ||
-      !session.lawDate
+      !session.lawDate ||
+      !session.externalConsent
     )
       return;
     const q = input.trim();
@@ -247,6 +273,10 @@ export function LegalWorkspace() {
         <Link to="/chats" search={{ chat: undefined }} className="cc-nav">
           <MessageSquare size={17} />
           Chats <span>{data.chats.length || ""}</span>
+        </Link>
+        <Link to="/connect" search={{ session: "", evaluation: "" }} className="cc-nav">
+          <MessageSquare size={17} />
+          AI legal assistant
         </Link>
         <p className="cc-eyebrow cc-history-label">Your inquiries</p>
         <div className="cc-session-list">
@@ -347,6 +377,23 @@ export function LegalWorkspace() {
                 />
               </label>
             </div>
+            <label className="cc-consent">
+              <input
+                type="checkbox"
+                checked={session.externalConsent === true}
+                disabled={session.busy}
+                onChange={(event) =>
+                  update(session.id, (value) => ({
+                    ...value,
+                    externalConsent: event.target.checked,
+                  }))
+                }
+              />
+              <span>
+                I agree to external AI processing and public legal research for this inquiry. Use
+                fictional or public facts for this demo.
+              </span>
+            </label>
             <div className="cc-messages">
               {!session.messages.length ? (
                 <div className="cc-empty cc-question-empty">
@@ -410,6 +457,7 @@ export function LegalWorkspace() {
                   aria-label="Send legal question"
                   disabled={
                     session.busy ||
+                    !session.externalConsent ||
                     !input.trim() ||
                     !session.jurisdiction.trim() ||
                     !session.lawDate
@@ -437,7 +485,10 @@ export function LegalWorkspace() {
                       input.trim() ||
                       session.messages.filter((m) => m.role === "user").at(-1)?.text;
                     if (!q || !pasted.trim()) return;
-                    addEvaluation(session, q, pasted.trim());
+                    addEvaluation(session, q, {
+                      answer: pasted.trim(),
+                      mode: previewMode ? "preview" : "live",
+                    });
                     setPaste(false);
                     setPasted("");
                     setInput("");
@@ -456,6 +507,7 @@ export function LegalWorkspace() {
                     className="cc-button"
                     disabled={
                       session.busy ||
+                      !session.externalConsent ||
                       !pasted.trim() ||
                       !session.jurisdiction.trim() ||
                       !session.lawDate ||
@@ -508,13 +560,14 @@ export function LegalWorkspace() {
                       </p>
                     </div>
                     <span className="cc-score-caption">
-                      {evaluation.mode === "preview"
-                        ? "Illustrative scores · no research performed"
+                      {evaluation.mode !== "live"
+                        ? "Mock / preview scores · no research performed"
                         : score === null
-                          ? "Waiting for all three reviewers"
+                          ? "Pending, abstained or incomplete"
                           : "Average of three reviewer scores"}
                     </span>
                   </div>
+                  <AssessmentSummary reviews={evaluation.reviews} />
                   {reviewers.map((r) => {
                     const result = evaluation.reviews.find((v) => v.id === r.id);
                     return (
@@ -549,7 +602,7 @@ export function LegalWorkspace() {
                               <p>{result.error}</p>
                               <button
                                 className="cc-quiet"
-                                onClick={() => void runReview(session, evaluation, r.id)}
+                                onClick={() => void runReview(session, evaluation, r.id, true)}
                               >
                                 <RotateCcw size={13} />
                                 Retry reviewer
@@ -558,6 +611,20 @@ export function LegalWorkspace() {
                           ) : (
                             <>
                               <p>{result?.explanation}</p>
+                              {result?.status === "abstained" && (
+                                <p className="cc-alert">
+                                  Reviewer abstained. Evidence is insufficient for a defensible
+                                  score.{" "}
+                                  <button
+                                    className="cc-quiet"
+                                    onClick={() => void runReview(session, evaluation, r.id, true)}
+                                  >
+                                    Research again
+                                  </button>
+                                </p>
+                              )}
+                              {result && <ResearchDetails review={result} />}
+
                               {!!result?.findings?.length && (
                                 <ul>
                                   {result.findings.map((f, i) => (
@@ -585,7 +652,7 @@ export function LegalWorkspace() {
                                 </details>
                               ) : (
                                 <small className="cc-muted">
-                                  {evaluation.mode === "preview"
+                                  {evaluation.mode !== "live"
                                     ? "Preview · no sources searched"
                                     : "No source links supplied by this reviewer."}
                                 </small>
@@ -597,6 +664,7 @@ export function LegalWorkspace() {
                     );
                   })}
                   <ScorerChat
+                    key={evaluation.id}
                     session={session}
                     evaluation={evaluation}
                     onSave={(scorerMessages) =>
@@ -609,20 +677,20 @@ export function LegalWorkspace() {
                     }
                   />
                   <div
-                    className={`cc-counsel-cta ${score !== null && score < 70 ? "emphasized" : ""}`}
+                    className={`cc-counsel-cta ${score !== null && score < 80 ? "emphasized" : ""}`}
                   >
                     <h3>
-                      {score !== null && score < 70
+                      {score !== null && score < 80
                         ? "A lawyer can help clarify this."
                         : "Want a professional perspective?"}
                     </h3>
                     <p>
-                      {score !== null && score < 70
-                        ? "The assessment is below 70. Consult a lawyer about the answer and your circumstances."
+                      {score !== null && score < 80
+                        ? "The assessment is below 80. Consult a lawyer about the answer and your circumstances."
                         : "Explore the answer with a lawyer whenever you need to."}
                     </p>
                     <Link
-                      className={score !== null && score < 70 ? "cc-button" : "cc-quiet"}
+                      className={score !== null && score < 80 ? "cc-button" : "cc-quiet"}
                       to="/connect"
                       search={{ session: session.id, evaluation: evaluation.id }}
                     >

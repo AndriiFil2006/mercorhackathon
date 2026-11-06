@@ -11,6 +11,8 @@ from app.main import app
 @pytest.fixture(autouse=True)
 def block_external_network(monkeypatch):
     """All tests must be offline, even when the developer has real keys configured."""
+    for key in ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "http_proxy", "https_proxy", "all_proxy"):
+        monkeypatch.delenv(key, raising=False)
     original_connect = socket.socket.connect
     original_create_connection = socket.create_connection
     def guarded_connect(sock, address):

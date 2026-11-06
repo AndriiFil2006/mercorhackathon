@@ -1,3 +1,7 @@
+> **Connected frontend setup:** Follow [CONNECTED-SETUP.md](../CONNECTED-SETUP.md) for the complete Windows pull/apply/private-env/free-key/run/test/push workflow. The new `/api/legal` routes connect the current browser UI; the `/api/v1` benchmark API described below remains available. Do not run the older standalone reviewer server for this integration.
+>
+> Set `AI_PROVIDER=mock` and `REVIEW_MODE=mock` for offline end-to-end tests, or `AI_PROVIDER=gemini` and `REVIEW_MODE=live` with your own private Gemini/Groq/Tavily keys. Apply Alembic migrations before starting the backend. Keep keys in ignored `backend/.env` only.
+
 # Legal AI generation and expert evaluation
 
 This FastAPI backend implements Mercor's specialized-domain verification workflow: submit a legal question, generate an independent answer, have a human review that exact answer, and export the review as JSONL. Gemini is the primary real-model integration. Mock mode is offline and deterministic. Generation success is never legal verification. No model training, automatic LLM judging, or Mercor transmission occurs.

@@ -15,9 +15,10 @@ def test_health_and_openapi(client):
     assert client.get("/health").json() == {"status": "healthy"}
     assert client.get("/docs").status_code == 200
     paths = client.get("/openapi.json").json()["paths"]
-    assert set(paths) == {"/health", "/api/v1/questions", "/api/v1/questions/{question_id}",
+    assert {"/health", "/api/v1/questions", "/api/v1/questions/{question_id}",
                          "/api/v1/questions/{question_id}/generate", "/api/v1/generations/{generation_id}",
-                         "/api/v1/evaluations", "/api/v1/evaluations/{evaluation_id}", "/api/v1/exports/evaluations"}
+                         "/api/v1/evaluations", "/api/v1/evaluations/{evaluation_id}", "/api/v1/exports/evaluations"} <= set(paths)
+    assert {"/api/legal/answer", "/api/legal/review", "/api/legal/handoff", "/api/legal/lawyer-chat"} <= set(paths)
 
 def test_questions_and_persistence(client, database, question_data):
     response = client.post("/api/v1/questions", json=question_data)

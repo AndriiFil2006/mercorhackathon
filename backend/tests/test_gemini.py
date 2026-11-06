@@ -52,7 +52,7 @@ def sdk_response(answer, **overrides):
 
 def settings(**overrides):
     return Settings(_env_file=None, **{
-        "ai_provider": "gemini", "gemini_api_key": "test-key-not-real",
+        "ai_provider": "gemini", "gemini_model": "gemini-2.5-flash", "gemini_api_key": "test-key-not-real",
         "gemini_max_retries": 2, **overrides,
     })
 
@@ -420,15 +420,14 @@ def test_final_persistence_failure_is_sanitized(database, question_data, monkeyp
         assert generation.ai_answer == ""
 
 
-def test_frontend_has_no_changes():
-    """Read-only repository boundary check; never formats or generates frontend files."""
-    import subprocess
+def test_connected_frontend_keeps_model_credentials_server_only():
+    """User-authorized integration updates frontend, but never exports server keys."""
     from pathlib import Path
     root = Path(__file__).resolve().parents[2]
-    for args in (["git", "diff", "--name-only", "--", "frontend"],
-                 ["git", "diff", "--cached", "--name-only", "--", "frontend"]):
-        result = subprocess.run(args, cwd=root, check=True, capture_output=True, text=True)
-        assert result.stdout.strip() == "", "Frontend changes exist; inspect ownership without reverting them"
+    for path in (root / "frontend/src").rglob("*.ts*"):
+        source = path.read_text()
+        for credential in ("VITE_GEMINI_API_KEY", "VITE_GROQ_API_KEY", "VITE_TAVILY_API_KEY"):
+            assert credential not in source
 
 
 def test_migration_preserves_historical_answer_and_review(tmp_path):

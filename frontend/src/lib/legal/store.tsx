@@ -42,6 +42,9 @@ export function LegalProvider({ children }: { children: ReactNode }) {
             }),
           );
         });
+        d.chats.forEach((c: any) => {
+          c.busy = false;
+        });
         setData(d);
       } else {
         const s = newSession();

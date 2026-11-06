@@ -34,10 +34,18 @@ function Landing() {
         <p>
           Ask your question. See the evidence.
           <br />
-          Reach a lawyer when you need one.
+          Explore it with an AI legal assistant.
         </p>
         <Link to="/workspace" className="cc-button">
           Begin an inquiry <ArrowRight size={17} />
+        </Link>
+        <Link
+          to="/connect"
+          search={{ session: "", evaluation: "" }}
+          className="cc-quiet cc-direct-link"
+        >
+          <MessageSquare size={16} />
+          Start an AI legal assistant chat
         </Link>
       </section>
       <span className="cc-landing-note">CounselCheck</span>

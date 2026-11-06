@@ -1,0 +1,12 @@
+# Private local configuration, credentials and runtime artifacts
+**/.env
+**/.env.*
+!**/.env.example
+**/.env*.txt
+**/.venv/
+**/__pycache__/
+**/.pytest_cache/
+**/node_modules/
+**/*.db
+**/*.db-shm
+**/*.db-wal

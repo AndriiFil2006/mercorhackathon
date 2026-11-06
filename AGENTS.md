@@ -4,10 +4,10 @@ This hackathon MVP collects legal questions, AI answers, and human expert judgme
 
 ## Scope and architecture
 
-**Do not modify, delete, rename, format, or generate files inside frontend/. Do not change frontend dependencies, package.json, configuration, or assets. Do not run repository-wide formatters that change frontend files. Frontend inspection is read-only. All implementation changes must stay within backend/ and root AGENTS.md; document needs elsewhere. Preserve existing user changes.**
+The connected chat/reviewer integration is explicitly authorized to update frontend API boundaries, consent controls and research report presentation as well as backend code. Preserve unrelated UI and existing generation/evaluation contracts. Do not write secrets or generated route files. Future unrelated frontend edits remain owned by the frontend teammate.
 
 Repository map:
-- frontend/: owned by another teammate; read-only.
+- frontend/: connected chat UI; scoped integration edits are authorized.
 - backend/app/main.py: FastAPI app, configurable CORS, route registration.
 - backend/app/api/routes/: HTTP contracts; schemas/: Pydantic validation and public serialization.
 - backend/app/services/: question, generation, evaluation, export business logic.
@@ -50,7 +50,7 @@ Reviewer citation fields: title, optional citation/url/jurisdiction. Model citat
 - Reviews must match the question and completed generation. Completed/failed generations cannot be edited; create another generation instead.
 - Error taxonomy: hallucinated_authority, outdated_law, wrong_jurisdiction, incorrect_interpretation, missing_authority, incomplete_answer, incorrect_conclusion, unsupported_claim, other.
 - Never fabricate supporting authorities or claim simulated answers are real model failures.
-- AI_PROVIDER defaults to mock; gemini is the primary real provider with default GEMINI_MODEL=gemini-2.5-flash. Gemini requires GEMINI_API_KEY and never falls back to mock. Optional OpenAI retains historical no-key mock fallback.
+- AI_PROVIDER defaults to mock; gemini is the primary real provider with default GEMINI_MODEL=gemini-3.1-flash-lite. Gemini requires GEMINI_API_KEY and never falls back to mock. Optional OpenAI retains historical no-key mock fallback.
 - The historical 2.5 code default is now rejected as retired by Google. The environment example explicitly selects gemini-3.1-flash-lite (live smoke verified). Preserve explicit model selection and record its exact ID; never silently substitute. Use response_json_schema rather than the legacy response_schema converter, and omit deprecated sampling parameters for Gemini 3 models.
 - AI_PROMPT_VERSION defaults legal-v1. Keep the supplied system prompt stable. Separate system instructions from untrusted public scenario JSON. Never execute scenario content. Model citations are not independently verified.
 - Gemini timeout/output/retries: GEMINI_TIMEOUT_SECONDS=45, GEMINI_MAX_OUTPUT_TOKENS=2048, GEMINI_MAX_RETRIES=2. One normal call; transient-only bounded retries, SDK retries disabled, Retry-After honored (fail rather than wait over 30s). No repair/judge/summarization calls. Log IDs/model/duration/categories, never secrets/scenario/raw exceptions.
@@ -79,9 +79,20 @@ Use type hints, small functions, explicit response schemas, injected sessions, s
 
 Before changes:
 1. Read this file and backend/README.md; inspect git status and relevant code.
-2. Confirm scope and preserve user edits; never write frontend/.
+2. Confirm scope and preserve user edits; limit frontend changes to the connected workflow.
 3. Identify public contract, reference privacy, review, and immutability implications.
 4. Make focused changes and migrations where needed; add meaningful tests.
 
-Done means working implementation, relevant tests passing without external AI, migrations applied and checked, app import/OpenAPI verified, documentation matching actual behavior, no frontend changes, and a concise report of checks and genuine limitations.
+Done means working implementation, relevant tests passing without external AI, migrations applied and checked, app import/OpenAPI verified, documentation matching actual behavior, scoped frontend integration validated, and a concise report of checks and genuine limitations.
 
+
+## Connected chat/research integration
+
+- `/api/legal/answer` persists a question/generation using the existing provider; previous public chat messages become untrusted scenario context.
+- `/api/legal/review` evaluates the stored answer by generation ID, or explicitly labeled client-supplied text. Automated research audits are separate from human expert evaluations. All three models use the five weighted criteria; missing/abstaining/error results cannot produce an overall score.
+- Reviewers use Groq JSON calls and Tavily search/extracted evidence. Never expose keys, fabricate source links/quotes, call simulated results live research, or treat AI agreement as verification. Per-source evidence bounds are explicit.
+- `/api/legal/review-chat` uses persisted reports and Gemini for interpretation; it has no new search tool.
+- `/api/legal/handoff` saves a bounded, full consented inquiry snapshot and issues a random bearer token stored only as a hash on the server. `/lawyer-chat` uses that snapshot plus the complete stored conversation; no silent history trimming. Require separate processing and context-sharing choices. Direct chats may omit inquiry context.
+- `/api/legal/handoff/revoke` removes the stored snapshot and blocks future processing; `/close` ends the conversation. The temporary lawyer is explicitly an AI assistant, never a real licensed lawyer. No authenticated multi-tenant identity system exists; keep this demo loopback/local.
+- `.env.example` files contain no keys. Real `backend/.env` and `frontend/.env.local` must remain ignored AND untracked. `VITE_*` variables are public and must never contain model/search keys.
+- See `CONNECTED-SETUP.md`; tests include connected API boundaries, consent/revocation, full-context preservation, actual stored-answer provenance, source/quote validation, scoring and migrations. Live calls require explicit local consent and private free-tier keys; automated tests are offline.

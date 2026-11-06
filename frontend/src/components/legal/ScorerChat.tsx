@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ArrowUp, LoaderCircle, MessageSquareMore } from "lucide-react";
 import { askScorer, previewMode } from "@/lib/legal/api";
-import { reviewers, uid, type Evaluation, type Session } from "@/lib/legal/types";
+import { uid, type Evaluation, type Session } from "@/lib/legal/types";
 import { Markdown } from "./LegalWorkspace";
 
 export function ScorerChat({
@@ -18,11 +18,12 @@ export function ScorerChat({
     [error, setError] = useState("");
   const history = evaluation.scorerMessages ?? [];
   const hasEvidence =
-    evaluation.answer.trim().length > 0 && evaluation.reviews.some((r) => r.status === "complete");
+    evaluation.answer.trim().length > 0 &&
+    evaluation.reviews.some((r) => r.status === "complete" || r.status === "abstained");
   async function send(event: React.FormEvent) {
     event.preventDefault();
     const question = prompt.trim();
-    if (!question || busy || !hasEvidence) return;
+    if (!question || busy || !hasEvidence || !session.externalConsent) return;
     setPrompt("");
     setError("");
     setBusy(true);
@@ -37,6 +38,7 @@ export function ScorerChat({
         reviews: evaluation.reviews,
         history,
         prompt: question,
+        externalConsent: session.externalConsent === true,
       });
       onSave([...next, { id: uid(), role: "assistant", text: reply }]);
     } catch (e) {
@@ -87,7 +89,7 @@ export function ScorerChat({
             />
             <button
               className="cc-send"
-              disabled={!prompt.trim() || busy}
+              disabled={!prompt.trim() || busy || !session.externalConsent}
               aria-label="Send scorer question"
             >
               {busy ? <LoaderCircle size={16} className="cc-spin" /> : <ArrowUp size={16} />}
